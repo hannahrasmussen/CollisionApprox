@@ -42,19 +42,19 @@ def n_e(T):
 
 def cs_eta(T,Tcm,c):
     eta_arr = np.linspace(-10,10,1000)
-    integral_arr = np.zeros(len(eta_arr)) #cubic spline integral that match w/ etas in the eta_array
+    num_den_arr = np.zeros(len(eta_arr)) 
     hold = np.zeros(len(x_values))
     for i in range (len(eta_arr)):
         for j in range (len(x_values)):
             hold[j] = (np.e**x_values[j])*w_values[j]*(x_values[j]**2)*f_eq(x_values[j],T,eta_arr[i])
-        integral_arr[i] = np.sum(hold) 
-    cs = CubicSpline(integral_arr,eta_arr) #cs will be different each time, depends on T
+        num_den_arr[i] = (1/(2*np.pi**3)) * np.sum(hold) 
+    cs = CubicSpline(num_den_arr,eta_arr) 
     
     integrand = np.zeros(len(x_values))
     for i in range (len(x_values)):
         integrand[i] = (np.e**x_values[i])*w_values[i]*(x_values[i]**2)*f(x_values[i],Tcm,c)
-    integral = np.sum(integrand) #value that will match with the eta we eventually output from this function
-    eta = cs(integral)
+    num_den = (1/(2*np.pi**3)) * np.sum(integrand)
+    eta = cs(num_den)
     return eta
 
 
@@ -70,7 +70,6 @@ def model_An(a,T,c,npts=201,etop=20):
     p_arr = e_arr / a
     f_arr = f(p_arr,1/a,c)
     feq_arr = f_eq(p_arr,T,eta)
-    net = ve.driver(p_arr,T,f_arr,bx*(1/a))
     
     def C_local(p_arr,A,n):
         C_arr = np.zeros(len(p_arr))
@@ -78,49 +77,8 @@ def model_An(a,T,c,npts=201,etop=20):
             C_arr[i] = (p_arr[i]**n)*(f_arr[i]-feq_arr[i])
         C_arr = -A*ne*(Gf**2)*(T**(2-n))*C_arr
         return C_arr
-   
-    popt, pcov = curve_fit(C_local,p_arr[:int(0.5*len(p_arr))],net[:int(0.5*len(p_arr))])
-    A,n = popt
-
-    return A,n
-
-
-#In[5]:
-
-
-def cs_eta_new(T,Tcm,c,p_arr,f_arr):
-    eta_arr = np.linspace(-10,10,1000)
-    integral_arr = np.zeros(len(eta_arr)) #cubic spline integral that match w/ etas in the eta_array
-    hold = np.zeros(len(x_values))
-    for i in range (len(eta_arr)):
-        for j in range (len(x_values)):
-            hold[j] = (np.e**x_values[j])*w_values[j]*(x_values[j]**2)*f_eq(x_values[j],T,eta_arr[i])
-        integral_arr[i] = np.sum(hold) 
-    cs = CubicSpline(integral_arr,eta_arr) #cs will be different each time, depends on T
     
-    integrand = np.zeros(len(p_arr))
-    for i in range (len(p_arr)):
-        integrand[i] = (p_arr[i]**2)*f(p_arr[i],Tcm,c)
-    integral = np.sum(integrand) #value that will match with the eta we eventually output from this function
-    eta = cs(integral)
-    return eta
-
-def model_An_new(a,T,c,e_arr,f_arr,npts=201,etop=20): 
-    
-    bx = e_arr[1]-e_arr[0]
-    ne = n_e(T)
-    p_arr = e_arr / a
-    eta = cs_eta_new(T,1/a,c,p_arr,f_arr)
-    feq_arr = f_eq(p_arr,T,eta)
     net = ve.driver(p_arr,T,f_arr,bx*(1/a))
-    
-    def C_local(p_arr,A,n):
-        C_arr = np.zeros(len(p_arr))
-        for i in range (len(C_arr)):
-            C_arr[i] = (p_arr[i]**n)*(f_arr[i]-feq_arr[i])
-        C_arr = -A*ne*(Gf**2)*(T**(2-n))*C_arr
-        return C_arr
-   
     popt, pcov = curve_fit(C_local,p_arr[:int(0.5*len(p_arr))],net[:int(0.5*len(p_arr))])
     A,n = popt
 
